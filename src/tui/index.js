@@ -283,8 +283,10 @@ export async function runTui({
   const onContinue = process.platform === 'win32' ? null : () => app.wake();
   if (onContinue) process.on('SIGCONT', onContinue);
 
-  input.start();
+  // Attach the app's input listeners before the first byte is parsed, so an
+  // immediate focus report (DECSET 1004) is not dropped.
   const done = app.start();
+  input.start();
   await done;
 
   input.stop();
