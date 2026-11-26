@@ -217,3 +217,56 @@ test('an immediate reconnect skips the backoff delay', async () => {
   assert.equal(connects, 1);
   gateway.close();
 });
+
+test('wake reconnects immediately when the socket has been silent', () => {
+  const gateway = new Gateway({ token: 'tok' });
+  const calls = [];
+  gateway.ws = { readyState: 1 };
+  gateway.acked = true;
+  gateway.lastActivityAt = Date.now() - 120_000;
+  gateway.reconnect = (resume, options) => {
+    calls.push([resume, options]);
+  };
+
+  gateway.wake();
+  assert.deepEqual(calls, [[false, { immediate: true }]]);
+  gateway.close();
+});
+
+test('the watchdog reconnects a socket that stopped producing payloads', () => {
+  const gateway = new Gateway({ token: 'tok' });
+  const calls = [];
+  gateway.state = 'online';
+  gateway.ws = { readyState: 1 };
+  gateway.lastActivityAt = Date.now() - 120_000;
+  gateway.reconnect = (resume, options) => {
+    calls.push([resume, options]);
+  };
+
+  gateway.checkHealth();
+  assert.deepEqual(calls, [[false, { immediate: true }]]);
+  gateway.close();
+});
+
+test('the watchdog leaves a recently active socket alone', () => {
+  const gateway = new Gateway({ token: 'tok' });
+  let reconnects = 0;
+  gateway.state = 'online';
+  gateway.ws = { readyState: 1 };
+  gateway.lastActivityAt = Date.now();
+  gateway.reconnect = () => {
+    reconnects += 1;
+  };
+
+  gateway.checkHealth();
+  assert.equal(reconnects, 0);
+  gateway.close();
+});
+
+test('any gateway payload counts as activity', () => {
+  const gateway = new Gateway({ token: 'tok' });
+  gateway.lastActivityAt = 0;
+  gateway.handlePayload({ op: 11 });
+  assert.ok(gateway.lastActivityAt > 0);
+  gateway.close();
+});

@@ -226,6 +226,9 @@ export function enterScreen(out = process.stdout) {
   // 1000 = click, 1002 = drag motion, 1006 = SGR coordinates.
   out.write('\x1b[?1000h\x1b[?1002h\x1b[?1006h');
   out.write('\x1b[?2004h');
+  // 1004 = focus in/out. Used to refresh after the terminal tab or window was
+  // in the background, even when the machine never suspended.
+  out.write('\x1b[?1004h');
   // Ask terminals that support it to report modified Enter/Tab as CSI-u:
   // xterm's modifyOtherKeys and the kitty keyboard protocol. Unsupported
   // terminals (VTE 0.68 and older) ignore both; Alt+Enter and Ctrl+J remain
@@ -237,6 +240,6 @@ export function enterScreen(out = process.stdout) {
 export function leaveScreen(out = process.stdout) {
   out.write('\x1b[<u');
   out.write('\x1b[>4;0m');
-  out.write('\x1b[?2004l\x1b[?1006l\x1b[?1002l\x1b[?1000l');
+  out.write('\x1b[?1004l\x1b[?2004l\x1b[?1006l\x1b[?1002l\x1b[?1000l');
   out.write('\x1b[0m\x1b[?25h\x1b[?1049l');
 }

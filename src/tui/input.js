@@ -207,6 +207,16 @@ export class TermInput extends EventEmitter {
   }
 
   emitCsi(params, final) {
+    // DECSET 1004 focus reporting: CSI I is focus-in, CSI O is focus-out.
+    // No modifiers, only the bare forms, so they cannot collide with keys.
+    if (!params && final === 'I') {
+      this.emit('focus');
+      return;
+    }
+    if (!params && final === 'O') {
+      this.emit('blur');
+      return;
+    }
     const parts =
       params === ''
         ? []

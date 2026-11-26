@@ -85,6 +85,12 @@ const WAKE_REFRESH_DELAY = 1_500;
 // A resume often beats Wi-Fi/DHCP back, and the TLS proxy may still hold a
 // dead pooled connection. Retry quietly instead of showing "502 upstream".
 const WAKE_REFRESH_RETRY_DELAYS = [2_000, 5_000, 10_000, 20_000];
+// Coming back to the terminal after this long should probe the gateway and
+// refetch the visible panes, even if the machine itself never suspended.
+const FOCUS_WAKE_MS = 15_000;
+// A gateway reconnect that kept us offline for at least this long can have
+// lost events (an expired session gets a fresh READY instead of a RESUME).
+const OFFLINE_REFRESH_MS = 5_000;
 
 function bellModeFromEnv() {
   const raw = String(process.env.TTYCORD_BELL || '').trim().toLowerCase();
@@ -317,6 +323,11 @@ export class App {
     this.lastTickAt = Date.now();
     this.wakeTimer = null;
     this.needWakeRefresh = false;
+    // DECSET 1004 focus tracking. Terminals that do not implement it simply
+    // never send the events, so the app stays in the "focused" state.
+    this.focused = true;
+    this.blurredAt = 0;
+    this.offlineAt = 0;
     this.bellMode = bellModeFromEnv();
     // Discord's per-guild/channel notification settings, keyed by guild id
     // ('' for DMs). Filled from READY and kept current by gateway updates.
@@ -621,9 +632,10 @@ export class App {
   }
 
   /**
-   * Recover from suspend or SIGCONT. A WebSocket that looks open may already
-   * be dead, and Discord's session may have expired, so probe/reconnect and
-   * refresh the visible channels from REST once the network is back.
+   * Recover from suspend, SIGCONT, or a long stay in a background terminal
+   * tab. A WebSocket that looks open may already be dead, and Discord's
+   * session may have expired, so probe/reconnect and refresh the visible
+   * channels from REST once the network is back.
    */
   wake() {
     if (!this.running) return;
@@ -633,14 +645,59 @@ export class App {
     // The terminal may have been reset while the machine slept.
     this.screen.invalidate?.();
     this.live?.wake?.();
+    this.scheduleRefresh(WAKE_REFRESH_DELAY);
+    this.draw();
+  }
+
+  /** Queue a quiet refresh once the gateway is known to be online. */
+  scheduleRefresh(delay = WAKE_REFRESH_DELAY) {
     this.needWakeRefresh = true;
     if (this.wakeTimer) clearTimeout(this.wakeTimer);
     this.wakeTimer = setTimeout(() => {
       this.wakeTimer = null;
       this.tryWakeRefresh();
-    }, WAKE_REFRESH_DELAY);
+    }, delay);
     this.wakeTimer.unref?.();
+  }
+
+  /**
+   * Terminal focus reporting (DECSET 1004). Discord's own client only marks a
+   * channel read while its window is focused; without this, messages arriving
+   * in the visible channel while the tab was in the background were silently
+   * marked read and never rang or showed up in the title.
+   */
+  onBlur() {
+    if (!this.running) return;
+    this.focused = false;
+    this.blurredAt = Date.now();
+    this.debug?.('terminal focus lost');
+  }
+
+  onFocus() {
+    if (!this.running) return;
+    const away = this.blurredAt ? Date.now() - this.blurredAt : 0;
+    this.focused = true;
+    this.blurredAt = 0;
+    this.screen.invalidate?.();
+    this.debug?.(`terminal focus after ${away}ms`);
+    if (away >= FOCUS_WAKE_MS) {
+      this.wake();
+      return;
+    }
+    // Short tab switch: the gateway kept delivering, so just clear the unread
+    // state for the panes now on screen.
+    this.markVisibleRead();
     this.draw();
+  }
+
+  /** Mark the channels currently on screen read, without scrolling them. */
+  markVisibleRead() {
+    for (const id of new Set(this.paneIds())) {
+      const cache = this.chats.get(String(id));
+      if (!cache || cache.loading || (cache.scroll || 0) > 0) continue;
+      const last = cache.items[cache.items.length - 1]?.id;
+      if (last) this.ackVisibleChannel(id, this.unread.has(String(id)));
+    }
   }
 
   /**
@@ -669,7 +726,7 @@ export class App {
     const failed = [];
     for (const id of ids) {
       const cache = this.chats.get(String(id));
-      if (!cache?.loaded || cache.loading || (cache.scroll || 0) > 0) continue;
+      if (!cache || cache.loading || (cache.scroll || 0) > 0) continue;
       // Quiet: a failed attempt is retried below, so do not flash a 502 toast
       // or replace the pane with an error banner.
       const loaded = await this.loadMessages(id, { force: true, quiet: true });
@@ -678,7 +735,9 @@ export class App {
         failed.push(String(id));
         continue;
       }
-      if (this.paneIds().includes(String(id)) && (cache.scroll || 0) === 0) {
+      // Do not mark anything read while the terminal is in the background;
+      // the unread count and bell must survive until the user comes back.
+      if (this.focused && this.paneIds().includes(String(id)) && (cache.scroll || 0) === 0) {
         const previousRead = this.readStates.get(String(id))?.lastMessageId || '';
         const last = cache.items[cache.items.length - 1]?.id || '';
         this.ackVisibleChannel(id, Boolean(last && (!previousRead || asBig(last) > asBig(previousRead))));
@@ -708,7 +767,7 @@ export class App {
     if (failed.length) {
       this.toast('메시지를 새로 고치지 못했습니다. ctrl+r로 다시 시도하세요', 'error');
     } else if (refreshed) {
-      this.toast('잠자기에서 깨어나 화면을 새로 고쳤습니다', 'ok');
+      this.toast('연결을 복구해 화면을 새로 고쳤습니다', 'ok');
     }
     this.draw();
   }
@@ -820,6 +879,8 @@ export class App {
     this.input.on('text', (text) => this.handleText(text));
     this.input.on('paste', (text) => this.handlePaste(text));
     this.input.on('mouse', (mouse) => this.handleMouse(mouse));
+    this.input.on('focus', () => this.onFocus());
+    this.input.on('blur', () => this.onBlur());
   }
 
   handlePaste(text) {
@@ -3254,8 +3315,20 @@ export class App {
   }
 
   onState({ state }) {
+    const wasOnline = this.state === 'online';
     this.state = state;
-    if (state === 'online' && this.needWakeRefresh) this.tryWakeRefresh();
+    if (state === 'online') {
+      const offlineFor = this.offlineAt ? Date.now() - this.offlineAt : 0;
+      this.offlineAt = 0;
+      if (this.needWakeRefresh) this.tryWakeRefresh();
+      else if (offlineFor >= OFFLINE_REFRESH_MS) {
+        // A resumed session replays missed events, but an expired one gets a
+        // fresh READY. Refetch the visible panes to close either gap.
+        this.scheduleRefresh(500);
+      }
+    } else if (wasOnline || !this.offlineAt) {
+      this.offlineAt = Date.now();
+    }
     this.draw();
   }
 
@@ -3305,8 +3378,10 @@ export class App {
     const mine = normalized.author?.id === this.myId;
     const visible = this.paneIds().includes(String(channelId));
     const atBottom = (cache.scroll || 0) === 0;
+    // Only count a message as read when the terminal is actually focused.
+    const reading = this.focused && visible && atBottom;
 
-    if (!mine && (!visible || !atBottom)) {
+    if (!mine && !reading) {
       const mention = mentionsUser(normalized.content, this.myId);
       const entry = this.unread.get(channelId) || { count: 0, mentions: 0 };
       entry.count += 1;
@@ -3314,7 +3389,7 @@ export class App {
       entry.lastMessageId = normalized.id;
       this.unread.set(channelId, entry);
       this.maybeBell({ mention, channelId });
-    } else if (!mine && visible && atBottom) {
+    } else if (!mine && reading) {
       this.markRead(channelId, normalized.id, { silent: true });
     }
 

@@ -119,3 +119,15 @@ test('a lone escape still resolves after the timeout', async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal(keys[0].key, 'escape');
 });
+
+test('DECSET 1004 focus reports become focus and blur events', () => {
+  const { input, feed } = makeInput();
+  const events = [];
+  input.on('focus', () => events.push('focus'));
+  input.on('blur', () => events.push('blur'));
+
+  feed('\u001b[I');
+  feed('\u001b[O');
+
+  assert.deepEqual(events, ['focus', 'blur']);
+});

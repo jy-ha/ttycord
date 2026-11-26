@@ -2820,3 +2820,133 @@ test('a quiet message load keeps the cache without an error toast', async () => 
   assert.equal(app.chat('101').error, null, 'no 502 banner for a background retry');
   assert.equal(app.toasts.length, 0);
 });
+
+// ---------------------------------------------------- focus / reconnect
+test('a blurred terminal does not mark the visible channel read', () => {
+  const out = fakeOut();
+  const { app } = makeApp({ out });
+  app.draw();
+  app.focused = false;
+  out.writes.length = 0;
+
+  app.onLiveMessage({
+    channelId: '101',
+    message: {
+      id: '980',
+      channel_id: '101',
+      type: 0,
+      author: { id: '2', username: 'mira' },
+      content: '<@1> 확인해줘',
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  assert.equal(app.unread.get('101')?.mentions, 1);
+  assert.equal(app.readStates.get('101'), undefined);
+  assert.equal(out.writes.filter((chunk) => chunk === '\x07').length, 1);
+  assert.equal(app.title, 'ttycord !1');
+});
+
+test('a focused terminal still marks the visible channel read', () => {
+  const out = fakeOut();
+  const { app } = makeApp({ out });
+  app.draw();
+  app.focused = true;
+  out.writes.length = 0;
+
+  app.onLiveMessage({
+    channelId: '101',
+    message: {
+      id: '981',
+      channel_id: '101',
+      type: 0,
+      author: { id: '2', username: 'mira' },
+      content: '<@1> 확인해줘',
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  assert.equal(app.unread.has('101'), false);
+  assert.equal(app.readStates.get('101').lastMessageId, '981');
+  assert.equal(out.writes.filter((chunk) => chunk === '\x07').length, 0);
+});
+
+test('focus after a short blur marks visible panes read without a probe', () => {
+  const { app } = makeApp();
+  app.unread.set('101', { count: 1, mentions: 1 });
+  app.focused = false;
+  app.blurredAt = Date.now() - 1_000;
+  let probes = 0;
+  app.wake = () => {
+    probes += 1;
+  };
+
+  app.onFocus();
+
+  assert.equal(probes, 0);
+  assert.equal(app.focused, true);
+  assert.equal(app.unread.has('101'), false);
+  assert.equal(app.readStates.get('101').lastMessageId, '900');
+});
+
+test('focus after a long blur probes the gateway and refreshes', () => {
+  const { app } = makeApp();
+  app.focused = false;
+  app.blurredAt = Date.now() - 60_000;
+  let probes = 0;
+  app.wake = () => {
+    probes += 1;
+  };
+
+  app.onFocus();
+
+  assert.equal(probes, 1);
+  assert.equal(app.focused, true);
+  assert.equal(app.blurredAt, 0);
+});
+
+test('wake refresh loads a visible pane that was never loaded', async () => {
+  const { app, client } = makeApp();
+  app.chat('101').loaded = false;
+
+  await app.refreshAfterWake();
+
+  assert.deepEqual(
+    client.fetched.map(([id]) => id),
+    ['101'],
+  );
+});
+
+test('a long gateway outage schedules a quiet refresh when it reconnects', () => {
+  const { app } = makeApp();
+  app.state = 'retrying';
+  app.offlineAt = Date.now() - 10_000;
+
+  app.onState({ state: 'online' });
+
+  assert.equal(app.needWakeRefresh, true);
+  assert.ok(app.wakeTimer);
+  clearTimeout(app.wakeTimer);
+  app.wakeTimer = null;
+});
+
+test('a brief gateway reconnect does not refetch messages', () => {
+  const { app } = makeApp();
+  app.state = 'retrying';
+  app.offlineAt = Date.now() - 1_000;
+
+  app.onState({ state: 'online' });
+
+  assert.equal(app.wakeTimer, null);
+  assert.equal(app.needWakeRefresh, false);
+});
+
+test('wake refresh does not clear unread state while blurred', async () => {
+  const { app } = makeApp();
+  app.focused = false;
+  app.unread.set('101', { count: 1, mentions: 1 });
+
+  await app.refreshAfterWake();
+
+  assert.equal(app.unread.has('101'), true);
+});

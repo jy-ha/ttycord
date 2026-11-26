@@ -72,6 +72,14 @@ export class Gateway extends EventEmitter {
     // A heartbeat should be acknowledged within this window. Waiting for the
     // next interval (41s) made a dead socket after suspend look like a freeze.
     ackTimeout = 10_000,
+    // A connection that never opens, or opens but never sends HELLO, must not
+    // hang forever (common when the network is still coming back after wake).
+    connectTimeout = 20_000,
+    helloTimeout = 20_000,
+    // Belt-and-braces: a quiet, half-open socket is reconnected even if the
+    // heartbeat timer itself was lost or throttled.
+    watchdogInterval = 5_000,
+    staleAfter = null,
     debug = null,
   } = {}) {
     super();
@@ -93,9 +101,17 @@ export class Gateway extends EventEmitter {
 
     this.heartbeatTimer = null;
     this.ackTimer = null;
+    this.connectTimer = null;
+    this.helloTimer = null;
     this.heartbeatInterval = 41_250;
     this.ackTimeout = ackTimeout;
     this.acked = true;
+    this.connectTimeout = connectTimeout;
+    this.helloTimeout = helloTimeout;
+    this.watchdogInterval = watchdogInterval;
+    this.staleAfter = staleAfter;
+    this.watchdogTimer = null;
+    this.lastActivityAt = 0;
 
     this.attempt = 0;
     this.reconnectTimer = null;
@@ -113,6 +129,8 @@ export class Gateway extends EventEmitter {
   connect() {
     if (this.stopping) return;
     this.clearReconnect();
+    this.clearConnectTimers();
+    this.startWatchdog();
     this.setState(this.connected ? 'retrying' : 'connecting', { force: true });
 
     const base =
@@ -139,10 +157,20 @@ export class Gateway extends EventEmitter {
       return;
     }
     this.ws = socket;
+    this.connectTimer = setTimeout(() => {
+      this.connectTimer = null;
+      if (this.stopping || this.ws !== socket) return;
+      this.debug?.('gateway connect timeout; retrying');
+      this.reconnect(Boolean(this.sessionId), { immediate: true });
+    }, this.connectTimeout);
+    this.connectTimer.unref?.();
 
     socket.addEventListener('open', () => {
       if (this.ws !== socket) return;
       this.connected = true;
+      this.lastActivityAt = Date.now();
+      this.clearConnectTimer();
+      this.armHelloTimeout();
       this.debug?.('gateway open');
     });
 
@@ -167,6 +195,7 @@ export class Gateway extends EventEmitter {
       if (this.ws !== socket) return;
       this.connected = false;
       this.ws = null;
+      this.clearConnectTimers();
       this.stopHeartbeat();
       this.handleClose(event.code, event.reason);
     });
@@ -174,6 +203,7 @@ export class Gateway extends EventEmitter {
 
   handlePayload(payload) {
     if (!payload || typeof payload !== 'object') return;
+    this.lastActivityAt = Date.now();
     if (payload.s !== undefined && payload.s !== null) this.seq = payload.s;
 
     switch (payload.op) {
@@ -191,6 +221,7 @@ export class Gateway extends EventEmitter {
         this.handleInvalidSession(payload.d);
         break;
       case 10:
+        this.clearHelloTimer();
         this.heartbeatInterval = Number(payload.d?.heartbeat_interval) || 41_250;
         this.startHeartbeat();
         if (this.sessionId && this.seq !== null) this.sendResume();
@@ -271,6 +302,63 @@ export class Gateway extends EventEmitter {
     this.ackTimer = null;
   }
 
+  clearConnectTimer() {
+    if (this.connectTimer) clearTimeout(this.connectTimer);
+    this.connectTimer = null;
+  }
+
+  clearHelloTimer() {
+    if (this.helloTimer) clearTimeout(this.helloTimer);
+    this.helloTimer = null;
+  }
+
+  clearConnectTimers() {
+    this.clearConnectTimer();
+    this.clearHelloTimer();
+  }
+
+  /** A new socket must answer HELLO in time; otherwise it is a dead end. */
+  armHelloTimeout() {
+    this.clearHelloTimer();
+    this.helloTimer = setTimeout(() => {
+      this.helloTimer = null;
+      if (this.stopping || this.state === 'online') return;
+      this.debug?.('gateway HELLO timeout; retrying');
+      this.reconnect(Boolean(this.sessionId), { immediate: true });
+    }, this.helloTimeout);
+    this.helloTimer.unref?.();
+  }
+
+  startWatchdog() {
+    if (this.watchdogTimer) return;
+    this.watchdogTimer = setInterval(() => this.checkHealth(), this.watchdogInterval);
+    this.watchdogTimer.unref?.();
+  }
+
+  stopWatchdog() {
+    if (this.watchdogTimer) clearInterval(this.watchdogTimer);
+    this.watchdogTimer = null;
+  }
+
+  /** How long a healthy (but quiet) gateway may go without any payload. */
+  watchdogStaleAfter() {
+    return this.staleAfter ?? Math.max(90_000, this.heartbeatInterval * 2 + this.ackTimeout);
+  }
+
+  /**
+   * Reconnect a socket that stopped producing payloads. Normally the 10s ACK
+   * watchdog catches this, but this also covers a lost/throttled heartbeat
+   * timer after a long background stay or a suspend.
+   */
+  checkHealth() {
+    if (this.stopping || this.state !== 'online') return;
+    if (this.ws?.readyState !== 1 || !this.lastActivityAt) return;
+    const idle = Date.now() - this.lastActivityAt;
+    if (idle <= this.watchdogStaleAfter()) return;
+    this.debug?.(`gateway watchdog: no payload for ${idle}ms; reconnecting`);
+    this.reconnect(Boolean(this.sessionId), { immediate: true });
+  }
+
   send(payload) {
     if (this.ws?.readyState !== 1) return false;
     try {
@@ -321,8 +409,13 @@ export class Gateway extends EventEmitter {
     this.clearReconnect();
     this.attempt = 0;
     if (this.ws?.readyState === 1) {
-      if (!this.acked) {
-        this.debug?.('gateway wake with heartbeat in flight; reconnecting');
+      // A sleeping machine leaves the socket open but produces no payloads.
+      // Skip the probe and reconnect immediately; waiting 10s for an ACK is
+      // what made the app look frozen after resume.
+      const maxIdle = this.staleAfter ?? Math.max(60_000, this.heartbeatInterval + this.ackTimeout);
+      const idle = this.lastActivityAt ? Date.now() - this.lastActivityAt : 0;
+      if (!this.acked || idle > maxIdle) {
+        this.debug?.(`gateway wake stale (${idle}ms); reconnecting`);
         this.reconnect(Boolean(this.sessionId), { immediate: true });
         return;
       }
@@ -403,6 +496,7 @@ export class Gateway extends EventEmitter {
     const socket = this.ws;
     this.ws = null;
     this.connected = false;
+    this.clearConnectTimers();
     if (!socket) return;
     try {
       socket.close(1000, 'client shutdown');
@@ -417,6 +511,8 @@ export class Gateway extends EventEmitter {
     this.clearReconnect();
     this.stopHeartbeat();
     this.clearAckTimer();
+    this.clearConnectTimers();
+    this.stopWatchdog();
     this.closeSocket();
     this.setState('stopped', { force: true });
   }
