@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Runtime data, logs and caches
+*.log
+*.tmp
+*.temp
+*.pid
+coverage/
+.nyc_output/
+.cache/
+
+# Local ttycord settings (tokens live outside the repo by default)
+config.json
+
+# Compiled TLS helper (rebuild with `npm run build:proxy`)
+spoof-proxy/bin/
+
+# Build output
+dist/
+build/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

@@ -1,0 +1,47 @@
+{
+  "name": "ttycord",
+  "version": "0.1.0",
+  "description": "Unofficial Discord terminal client — REST + Gateway CLI and realtime TUI",
+  "type": "module",
+  "bin": {
+    "ttycord": "bin/ttycord.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs",
+    "scripts",
+    "spoof-proxy/main.go",
+    "spoof-proxy/main_test.go",
+    "spoof-proxy/go.mod",
+    "spoof-proxy/go.sum",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node bin/ttycord.js",
+    "test": "node --test test/*.test.js",
+    "dump": "node bin/ttycord.js tui --dump",
+    "build:proxy": "node scripts/build-proxy.js"
+  },
+  "keywords": [
+    "discord",
+    "tui",
+    "cli",
+    "terminal",
+    "gateway"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jy-ha/ttycord.git"
+  },
+  "homepage": "https://github.com/jy-ha/ttycord#readme",
+  "bugs": {
+    "url": "https://github.com/jy-ha/ttycord/issues"
+  },
+  "author": "jy-ha",
+  "license": "MIT"
+}
