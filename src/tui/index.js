@@ -29,7 +29,7 @@ export function debugLogger(enabled) {
 
 function fakeClient() {
   const me = { id: '1', username: 'demo_user', global_name: 'Demo' };
-  const mira = { id: '2', username: 'mira', global_name: '미라' };
+  const mira = { id: '2', username: 'mira', global_name: 'Mira' };
   const jun = { id: '3', username: 'jun', global_name: 'Jun' };
   const users = new Map([
     [me.id, me],
@@ -82,7 +82,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
     guild_id: '10',
     type: 0,
     name: 'general',
-    topic: '리눅스 · TUI · 잡담',
+    topic: 'Linux · TUI · off-topic',
     position: 0,
     last_message_id: '900',
   });
@@ -91,7 +91,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
     guild_id: '10',
     type: 0,
     name: 'dev',
-    topic: '개발 이야기',
+    topic: 'development talk',
     parent_id: '100',
     position: 1,
     last_message_id: '899',
@@ -114,23 +114,23 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
   });
   const guild = {
     id: '10',
-    name: 'Rust Korea',
-    initials: 'RK',
+    name: 'Demo Guild',
+    initials: 'DG',
     channels: [general, category, dev, random],
   };
-  const vrc = {
+  const gaming = {
     id: '20',
-    name: 'VRChat',
-    initials: 'VR',
+    name: 'Gaming',
+    initials: 'GM',
     channels: [],
   };
   const temp = {
     id: '30',
-    name: '임시 서버',
-    initials: '임',
+    name: 'Test Server',
+    initials: 'TS',
     channels: [],
   };
-  app.guilds = [guild, vrc, temp];
+  app.guilds = [guild, gaming, temp];
   // Real accounts keep their folders unnamed; the id is the only handle.
   app.folders = [
     { id: '1929507120', name: '', color: null, guildIds: ['10', '20', '30'] },
@@ -139,7 +139,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
     client.rememberChannel({
       id: '201',
       type: 1,
-      recipients: [{ id: '2', username: 'mira', global_name: '미라' }],
+      recipients: [{ id: '2', username: 'mira', global_name: 'Mira' }],
       last_message_id: '897',
     }),
   ];
@@ -157,8 +157,8 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       channel_id: '101',
       type: 0,
       timestamp: new Date(Date.now() - 3_600_000).toISOString(),
-      author: { id: '2', username: 'mira', global_name: '미라' },
-      content: '디스코드 TUI 만들어 본 사람 있나요?',
+      author: { id: '2', username: 'mira', global_name: 'Mira' },
+      content: 'Anyone here built a Discord TUI before?',
     },
     {
       id: '891',
@@ -166,15 +166,15 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       type: 0,
       timestamp: new Date(Date.now() - 3_500_000).toISOString(),
       author: { id: '3', username: 'jun', global_name: 'Jun' },
-      content: '`node --test`로 오프라인 테스트 짜고 있어요.',
+      content: 'Writing offline tests with `node --test`.',
     },
     {
       id: '892',
       channel_id: '101',
       type: 0,
       timestamp: new Date(Date.now() - 3_400_000).toISOString(),
-      author: { id: '2', username: 'mira', global_name: '미라' },
-      content: '좋네요. **게이트웨이 재연결**은 어떻게 처리하나요?',
+      author: { id: '2', username: 'mira', global_name: 'Mira' },
+      content: 'Nice. How do you handle **gateway reconnects**?',
     },
     {
       id: '893',
@@ -182,11 +182,11 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       type: 0,
       timestamp: new Date(Date.now() - 3_300_000).toISOString(),
       author: { id: '3', username: 'jun', global_name: 'Jun' },
-      content: '지수 백오프 + RESUME 입니다. op 7/9도 처리했어요.',
+      content: 'Exponential backoff plus RESUME. op 7/9 as well.',
       referenced_message: {
         id: '892',
-        author: { id: '2', username: 'mira', global_name: '미라' },
-        content: '게이트웨이 재연결은 어떻게 처리하나요?',
+        author: { id: '2', username: 'mira', global_name: 'Mira' },
+        content: 'How do you handle gateway reconnects?',
       },
     },
     {
@@ -194,8 +194,8 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       channel_id: '101',
       type: 0,
       timestamp: new Date(Date.now() - 3_200_000).toISOString(),
-      author: { id: '2', username: 'mira', global_name: '미라' },
-      content: '스크린샷도 올려 주세요',
+      author: { id: '2', username: 'mira', global_name: 'Mira' },
+      content: 'Share a screenshot too',
       attachments: [{ filename: 'tui.png', size: 128_000, content_type: 'image/png' }],
     },
     {
@@ -204,7 +204,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       type: 0,
       timestamp: new Date(Date.now() - 1_800_000).toISOString(),
       author: { id: '1', username: 'demo_user', global_name: 'Demo' },
-      content: '거의 다 됐습니다. 이제 실시간 수신만 확인하면 돼요.',
+      content: 'Almost done. Just need to verify live messages.',
     },
     {
       id: '896',
@@ -212,15 +212,15 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       type: 0,
       timestamp: new Date(Date.now() - 600_000).toISOString(),
       author: { id: '3', username: 'jun', global_name: 'Jun' },
-      content: '오 좋아요! 알림도 잘 뜨네요.',
+      content: 'Looks good! Notifications work too.',
     },
     {
       id: '897',
       channel_id: '101',
       type: 0,
       timestamp: new Date(Date.now() - 500_000).toISOString(),
-      author: { id: '2', username: 'mira', global_name: '미라' },
-      content: '채널 열면 읽음 처리도 자동인가요?',
+      author: { id: '2', username: 'mira', global_name: 'Mira' },
+      content: 'Does opening a channel mark it read automatically?',
     },
     {
       id: '898',
@@ -228,7 +228,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       type: 0,
       timestamp: new Date(Date.now() - 400_000).toISOString(),
       author: { id: '1', username: 'demo_user', global_name: 'Demo' },
-      content: '네. 열 때 자동으로 됩니다.',
+      content: 'Yes. It happens on open.',
     },
     {
       id: '899',
@@ -236,7 +236,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
       type: 0,
       timestamp: new Date(Date.now() - 300_000).toISOString(),
       author: { id: '3', username: 'jun', global_name: 'Jun' },
-      content: '좋습니다 👍',
+      content: 'Nice 👍',
     },
   ];
   const cache = app.chat('101');
@@ -244,7 +244,7 @@ export function dumpRender({ width = 110, height = 34 } = {}) {
   cache.byId = new Map(messages.map((message) => [message.id, message]));
   cache.loaded = true;
   cache.version = 1;
-  cache.draft = '좋아요, 이제 실제 서버에서 확인해 볼게요.';
+  cache.draft = 'Looks good, let me verify against a real server.';
 
   app.draw();
   return screen.renderToString();

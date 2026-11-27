@@ -237,7 +237,7 @@ export class App {
     this.thumbActive = 0;
 
     this.myId = String(client.me?.id || '');
-    this.myName = displayName(client.me, '나');
+    this.myName = displayName(client.me, 'me');
     this.users = client.users;
 
     this.guilds = [];
@@ -506,13 +506,13 @@ export class App {
       this.splitMode = true;
       this.panes = this.selectedChannelId ? [this.selectedChannelId] : [];
       this.paneIndex = 0;
-      this.toast('분할 보기 켜짐 · 채널을 열면 최대 4개까지 나뉩니다');
+      this.toast('split view on · opening channels fills up to 4 panes');
     } else {
       const id = this.selectedChannelId;
       this.splitMode = false;
       this.panes = id ? [id] : [];
       this.paneIndex = 0;
-      this.toast('분할 보기 꺼짐');
+      this.toast('split view off');
     }
     this.selection = null;
     this.invalidateLayouts();
@@ -583,11 +583,11 @@ export class App {
   /** Close the focused split column; the last one stays. */
   closePane() {
     if (!this.splitMode) {
-      this.toast('분할 보기가 꺼져 있습니다 (s로 켜기)');
+      this.toast('split view is off (press s to enable)');
       return;
     }
     if (this.panes.length <= 1) {
-      this.toast('마지막 창은 닫을 수 없습니다 (s: 분할 끄기)');
+      this.toast('cannot close the last pane (s: turn split view off)');
       return;
     }
     const index = this.activePaneIndex();
@@ -597,7 +597,7 @@ export class App {
     this.resetMention();
     const id = this.panes[this.paneIndex];
     this.selectedChannelId = id;
-    this.toast('창을 닫았습니다');
+    this.toast('pane closed');
     this.syncGuildContext(this.channelById(id));
     this.openChannel(id, { focus: false, resetScroll: false, resolve: true });
   }
@@ -765,9 +765,9 @@ export class App {
 
     this.needWakeRefresh = false;
     if (failed.length) {
-      this.toast('메시지를 새로 고치지 못했습니다. ctrl+r로 다시 시도하세요', 'error');
+      this.toast('could not refresh messages. press ctrl+r to retry', 'error');
     } else if (refreshed) {
-      this.toast('연결을 복구해 화면을 새로 고쳤습니다', 'ok');
+      this.toast('connection restored; view refreshed', 'ok');
     }
     this.draw();
   }
@@ -937,7 +937,7 @@ export class App {
           this.stageAttachments(parsed);
           return;
         }
-        this.toast('클립보드의 파일을 첨부할 수 없습니다', 'error');
+        this.toast('could not attach the clipboard files', 'error');
         return;
       }
       if (result?.kind === 'text' && result.text) {
@@ -953,9 +953,9 @@ export class App {
         this.draw();
         return;
       }
-      this.toast('클립보드에 이미지나 파일이 없습니다', 'error');
+      this.toast('no image or file on the clipboard', 'error');
     } catch (error) {
-      this.toast(`클립보드 읽기 실패: ${error.message}`, 'error');
+      this.toast(`clipboard read failed: ${error.message}`, 'error');
     } finally {
       this.clipboardBusy = false;
     }
@@ -1064,7 +1064,7 @@ export class App {
   stageAttachments({ files = [], rejected = [] } = {}, { silent = false } = {}) {
     const channel = this.currentChannel();
     if (!channel) {
-      this.toast('채널을 먼저 선택하세요', 'error');
+      this.toast('select a channel first', 'error');
       return;
     }
     const cache = this.chat(channel.id);
@@ -1072,12 +1072,12 @@ export class App {
     for (const file of files) {
       if (cache.attachments.some((item) => item.path === file.path)) continue;
       if (cache.attachments.length >= MAX_ATTACHMENTS) {
-        this.toast(`첨부는 한 번에 ${MAX_ATTACHMENTS}개까지 가능합니다`, 'error');
+        this.toast(`up to ${MAX_ATTACHMENTS} attachments per message`, 'error');
         break;
       }
       if (file.size > MAX_ATTACHMENT_BYTES) {
         this.toast(
-          `${file.name}: 너무 큽니다 (${formatBytes(file.size)} / 최대 ${formatBytes(MAX_ATTACHMENT_BYTES)})`,
+          `${file.name}: too large (${formatBytes(file.size)} / max ${formatBytes(MAX_ATTACHMENT_BYTES)})`,
           'error',
         );
         continue;
@@ -1086,13 +1086,16 @@ export class App {
       added += 1;
     }
     for (const item of rejected.slice(0, 2)) {
-      const reason = item.reason === 'directory' ? '폴더는 첨부할 수 없습니다' : '파일을 찾을 수 없습니다';
+      const reason = item.reason === 'directory' ? 'folders cannot be attached' : 'file not found';
       this.toast(`${item.name}: ${reason}`, 'error');
     }
     if (added) {
       this.focus = 'composer';
       if (!silent) {
-        this.toast(`첨부 ${added}개 추가 (${cache.attachments.length}/${MAX_ATTACHMENTS})`, 'ok');
+        this.toast(
+          `attached ${added} (${cache.attachments.length}/${MAX_ATTACHMENTS})`,
+          'ok',
+        );
       }
     }
     this.draw();
@@ -1105,7 +1108,7 @@ export class App {
     const removed = cache.attachments.pop();
     if (!removed) return;
     this.releaseClipboardFiles([removed]);
-    this.toast(`첨부 제거: ${removed.name}`);
+    this.toast(`removed attachment: ${removed.name}`);
     this.draw();
   }
 
@@ -1224,7 +1227,7 @@ export class App {
         return;
       }
       this.quitArmedAt = now;
-      this.toast('한 번 더 ctrl+c를 누르면 종료합니다');
+      this.toast('press ctrl+c again to quit');
       return;
     }
     if (key.key === 'escape' && this.selection) {
@@ -1636,11 +1639,11 @@ export class App {
     try {
       method = await this.copy(text, { out: this.out });
     } catch (error) {
-      this.toast(`복사 실패: ${error.message}`, 'error');
+      this.toast(`copy failed: ${error.message}`, 'error');
       return;
     }
     const how = method === 'osc52' ? 'OSC52' : method === 'gtk' ? 'GTK' : 'clipboard';
-    this.toast(`복사됨 (${text.length}자, ${how})`);
+    this.toast(`copied ${text.length} chars (${how})`);
   }
 
 
@@ -1667,7 +1670,7 @@ export class App {
     const cache = this.currentChat();
     if (!cache) return;
     if (!cache.items.length) {
-      this.toast('메시지가 없습니다');
+      this.toast('no messages');
       return;
     }
     const wanted = String(id || cache.cursorId || cache.items[cache.items.length - 1].id);
@@ -1689,14 +1692,14 @@ export class App {
   messageMenuItems(message) {
     const mine = String(message?.author?.id) === this.myId;
     const items = [
-      { key: 'react', label: '반응', hint: 'r' },
-      { key: 'reply', label: '답장', hint: 'R' },
+      { key: 'react', label: 'react', hint: 'r' },
+      { key: 'reply', label: 'reply', hint: 'R' },
     ];
     if (mine) {
-      items.push({ key: 'edit', label: '수정', hint: 'e' });
-      items.push({ key: 'delete', label: '삭제', hint: 'd' });
+      items.push({ key: 'edit', label: 'edit', hint: 'e' });
+      items.push({ key: 'delete', label: 'delete', hint: 'd' });
     }
-    items.push({ key: 'copy', label: '링크 복사', hint: 'y' });
+    items.push({ key: 'copy', label: 'copy link', hint: 'y' });
     return items;
   }
 
@@ -1758,7 +1761,7 @@ export class App {
     }
     if (item.key === 'delete') {
       if (String(message.author?.id) !== this.myId) {
-        this.toast('내 메시지만 삭제할 수 있습니다', 'error');
+        this.toast('you can only delete your own messages', 'error');
         return;
       }
       const now = Date.now();
@@ -1772,8 +1775,8 @@ export class App {
       this.deleteArmed = { id: message.id, at: now };
       menu.confirmDelete = true;
       const target = menu.items.find((entry) => entry.key === 'delete');
-      if (target) target.label = '삭제 확인';
-      this.toast('한 번 더 클릭하면 삭제합니다', 'error');
+      if (target) target.label = 'confirm delete';
+      this.toast('click again to delete', 'error');
     }
   }
 
@@ -1934,7 +1937,7 @@ export class App {
     if (key.key === 'enter') {
       const emoji = mode.buffer ? resolveReaction(mode.buffer) : REACTION_CHOICES[0].emoji;
       if (!emoji) {
-        this.toast('알 수 없는 이모지입니다');
+        this.toast('unknown emoji');
         return;
       }
       this.reactMode = null;
@@ -1971,14 +1974,14 @@ export class App {
     try {
       if (adding) await this.client.addReaction(channel.id, message.id, emoji);
       else await this.client.removeReaction(channel.id, message.id, emoji);
-      this.toast(adding ? `반응 추가 ${emoji}` : `반응 취소 ${emoji}`, 'ok');
+      this.toast(adding ? `reacted ${emoji}` : `removed reaction ${emoji}`, 'ok');
     } catch (error) {
       this.applyReactionLocal(cache, message, {
         type: adding ? 'remove' : 'add',
         userId: this.myId,
         emoji: emojiObject,
       });
-      this.toast(`반응 실패: ${error.message}`, 'error');
+      this.toast(`reaction failed: ${error.message}`, 'error');
     }
   }
 
@@ -2031,14 +2034,14 @@ export class App {
     cache.editingId = null;
     cache.editBackup = null;
     this.focus = 'composer';
-    this.toast('답장 대상 지정 (esc 취소)');
+    this.toast('replying (esc to cancel)');
   }
 
   editSelected() {
     const message = this.selectedMessage();
     if (!message) return;
     if (String(message.author?.id) !== this.myId) {
-      this.toast('내 메시지만 수정할 수 있습니다', 'error');
+      this.toast('you can only edit your own messages', 'error');
       return;
     }
     const cache = this.currentChat();
@@ -2049,7 +2052,7 @@ export class App {
     cache.cursor = graphemes(cache.draft).length;
     this.resetMention();
     this.focus = 'composer';
-    this.toast('메시지 수정 중 (esc 취소)');
+    this.toast('editing message (esc to cancel)');
   }
 
   /** Cancel a pending reply or edit. Returns true when something was cleared. */
@@ -2079,7 +2082,7 @@ export class App {
     const message = this.selectedMessage();
     if (!message) return;
     if (String(message.author?.id) !== this.myId) {
-      this.toast('내 메시지만 삭제할 수 있습니다', 'error');
+      this.toast('you can only delete your own messages', 'error');
       return;
     }
     const now = Date.now();
@@ -2089,7 +2092,7 @@ export class App {
       return;
     }
     this.deleteArmed = { id: message.id, at: now };
-    this.toast('한 번 더 d를 누르면 삭제합니다', 'error');
+    this.toast('press d again to delete', 'error');
   }
 
   async deleteMessage(message) {
@@ -2104,9 +2107,9 @@ export class App {
     this.draw();
     try {
       await this.client.deleteMessage(channel.id, message.id);
-      this.toast('메시지를 삭제했습니다', 'ok');
+      this.toast('message deleted', 'ok');
     } catch (error) {
-      this.toast(`삭제 실패: ${error.message}`, 'error');
+      this.toast(`delete failed: ${error.message}`, 'error');
       this.mergeMessages(cache, [message]);
     }
   }
@@ -2117,7 +2120,7 @@ export class App {
     const guildId = this.channelGuildId(this.currentChannel(), message.channel_id) || '@me';
     const url = `https://discord.com/channels/${guildId}/${message.channel_id}/${message.id}`;
     const method = await this.copy(url);
-    this.toast(method ? `링크 복사 (${method})` : '링크를 복사하지 못했습니다', method ? 'ok' : 'error');
+    this.toast(method ? `link copied (${method})` : 'could not copy the link', method ? 'ok' : 'error');
   }
 
   /**
@@ -2129,11 +2132,11 @@ export class App {
     try {
       parsed = new URL(String(url));
     } catch {
-      this.toast('열 수 없는 링크입니다', 'error');
+      this.toast('cannot open that link', 'error');
       return;
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      this.toast('열 수 없는 링크입니다', 'error');
+      this.toast('cannot open that link', 'error');
       return;
     }
     const command = process.platform === 'darwin'
@@ -2146,11 +2149,11 @@ export class App {
       : [parsed.href];
     try {
       const child = spawn(command, args, { detached: true, stdio: 'ignore' });
-      child.on('error', (error) => this.toast(`링크를 열지 못했습니다: ${error.message}`, 'error'));
+      child.on('error', (error) => this.toast(`could not open the link: ${error.message}`, 'error'));
       child.unref();
-      this.toast('브라우저에서 엽니다', 'ok');
+      this.toast('opening in the browser', 'ok');
     } catch (error) {
-      this.toast(`링크를 열지 못했습니다: ${error.message}`, 'error');
+      this.toast(`could not open the link: ${error.message}`, 'error');
     }
   }
 
@@ -2255,7 +2258,7 @@ export class App {
       }
       await this.bootstrapSelection();
     } catch (error) {
-      this.toast(`초기 데이터를 불러오지 못했습니다: ${error.message}`, 'error');
+      this.toast(`could not load initial data: ${error.message}`, 'error');
     }
   }
 
@@ -2634,12 +2637,12 @@ export class App {
 
   toggleImages() {
     if (!this.images.supported) {
-      this.toast(`이미지 표시 불가: ${this.images.reason || 'disabled'}`, 'error');
+      this.toast(`inline images unavailable: ${this.images.reason || 'disabled'}`, 'error');
       return;
     }
     this.images.enabled = !this.images.enabled;
     this.invalidateLayouts();
-    this.toast(this.images.enabled ? '이미지 표시 켜짐' : '이미지 표시 꺼짐', 'info');
+    this.toast(this.images.enabled ? 'inline images on' : 'inline images off', 'info');
     if (this.images.enabled) {
       // Every visible column may hold previewable attachments.
       const ids = this.paneIds();
@@ -2760,7 +2763,7 @@ export class App {
         guild.channels = list;
         this.recomputeUnread();
       } catch (error) {
-        this.toast(`채널 목록을 불러오지 못했습니다: ${error.message}`, 'error');
+        this.toast(`could not load channels: ${error.message}`, 'error');
       } finally {
         this.guildLoads.delete(guild.id);
         this.draw();
@@ -2891,7 +2894,7 @@ export class App {
       // A quiet wake retry must leave the old messages on screen instead of
       // replacing them with a transient 502 banner.
       if (!quiet) cache.error = error.message;
-      if (!quiet) this.toast(`메시지를 불러오지 못했습니다: ${error.message}`, 'error');
+      if (!quiet) this.toast(`could not load messages: ${error.message}`, 'error');
       return false;
     } finally {
       cache.loading = false;
@@ -2945,7 +2948,7 @@ export class App {
       cache.oldestId = cache.items[0]?.id || null;
       cache.hasMore = list.length >= 50;
     } catch (error) {
-      this.toast(`이전 메시지를 불러오지 못했습니다: ${error.message}`, 'error');
+      this.toast(`could not load older messages: ${error.message}`, 'error');
     } finally {
       cache.loading = false;
       this.draw();
@@ -2962,7 +2965,7 @@ export class App {
     if (now - this.lastReloadAt < RELOAD_COOLDOWN) return;
     this.lastReloadAt = now;
     await this.loadMessages(channel.id, { force: true });
-    this.toast('메시지를 다시 불러왔습니다', 'ok');
+    this.toast('messages reloaded', 'ok');
   }
 
   // --------------------------------------------------------------- messages
@@ -3006,12 +3009,12 @@ export class App {
         const updated = await this.client.editMessage(channel.id, messageId, text);
         const message = normalizeMessage(updated);
         if (message) this.mergeMessages(cache, [message]);
-        this.toast('메시지를 수정했습니다', 'ok');
+        this.toast('message edited', 'ok');
       } catch (error) {
         // Put the text back so the edit can be retried.
         cache.draft = text;
         cache.cursor = graphemes(text).length;
-        this.toast(`수정 실패: ${error.message}`, 'error');
+        this.toast(`edit failed: ${error.message}`, 'error');
       }
       this.draw();
       return;
@@ -3029,7 +3032,7 @@ export class App {
       this.sendTimes.set(channelKey, recent);
       if (now - this.lastSendToastAt > 1_500) {
         this.lastSendToastAt = now;
-        this.toast('전송이 너무 빠릅니다. 잠시 후 다시 시도하세요', 'error');
+        this.toast('sending too fast. try again shortly', 'error');
       }
       return;
     }
@@ -3071,7 +3074,7 @@ export class App {
       let sent;
       if (staged.length) {
         if (typeof this.client.sendMessageWithFiles !== 'function') {
-          throw new Error('첨부 전송을 지원하지 않는 클라이언트입니다');
+          throw new Error('this client does not support attachments');
         }
         // Read lazily so a cancelled draft never touches the disk.
         const upload = await Promise.all(
@@ -3103,7 +3106,7 @@ export class App {
       if (staged.length && !cache.attachments.length) cache.attachments = staged;
       cache.version += 1;
       cache.layout = null;
-      this.toast(`전송 실패: ${error.message}`, 'error');
+      this.toast(`send failed: ${error.message}`, 'error');
     }
   }
 
@@ -3122,7 +3125,7 @@ export class App {
     cache.version += 1;
     cache.layout = null;
     this.live?.ack?.(id, String(last));
-    if (!silent) this.toast('읽음 처리했습니다', 'ok');
+    if (!silent) this.toast('marked read', 'ok');
     else this.draw();
   }
 
@@ -3300,7 +3303,7 @@ export class App {
     if (!this.live) return;
     this.live.on('state', (event) => this.onState(event));
     this.live.on('ready', (data) => this.onReady(data));
-    this.live.on('resumed', () => this.toast('게이트웨이 세션을 복구했습니다', 'ok'));
+    this.live.on('resumed', () => this.toast('gateway session resumed', 'ok'));
     this.live.on('message', (event) => this.onLiveMessage(event));
     this.live.on('message_update', (event) => this.onLiveMessageUpdate(event));
     this.live.on('message_delete', (event) => this.onLiveMessageDelete(event));
@@ -3311,7 +3314,7 @@ export class App {
     this.live.on('guild_settings', (event) => this.onGuildSettings(event));
     this.live.on('channel', () => this.onChannelChange());
     this.live.on('guild', () => this.onGuildChange());
-    this.live.on('fatal', (error) => this.toast(error.message || '치명적인 게이트웨이 오류', 'error'));
+    this.live.on('fatal', (error) => this.toast(error.message || 'fatal gateway error', 'error'));
   }
 
   onState({ state }) {

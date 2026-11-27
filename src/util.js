@@ -226,6 +226,10 @@ export function formatBytes(value) {
 }
 
 const TIME_STYLES = new Set(['t', 'T', 'd', 'D', 'f', 'F', 's', 'S', 'R']);
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 
 function formatDiscordTimestamp(seconds, style) {
   const date = new Date(Number(seconds) * 1000);
@@ -241,7 +245,7 @@ function formatDiscordTimestamp(seconds, style) {
     case 'd':
       return ymd;
     case 'D':
-      return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+      return `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
     case 'R':
       return relativeTime(date.getTime());
     case 's':
@@ -259,11 +263,11 @@ export function relativeTime(ms) {
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (delta < minute) return '방금';
-  if (delta < hour) return `${Math.floor(delta / minute)}분 전`;
-  if (delta < day) return `${Math.floor(delta / hour)}시간 전`;
-  if (delta < 30 * day) return `${Math.floor(delta / day)}일 전`;
-  return `${Math.floor(delta / (30 * day))}개월 전`;
+  if (delta < minute) return 'just now';
+  if (delta < hour) return `${Math.floor(delta / minute)}m ago`;
+  if (delta < day) return `${Math.floor(delta / hour)}h ago`;
+  if (delta < 30 * day) return `${Math.floor(delta / day)}d ago`;
+  return `${Math.floor(delta / (30 * day))}mo ago`;
 }
 
 /**
@@ -301,7 +305,7 @@ export function renderMentions(content, { users = null, channels = null, roles =
     const key = style && TIME_STYLES.has(style) ? style : 'f';
     return formatDiscordTimestamp(seconds, key);
   });
-  text = text.replace(/<id:(?:customize|browse|guide|linked-roles[^>]*)>/g, '[서버 안내]');
+  text = text.replace(/<id:(?:customize|browse|guide|linked-roles[^>]*)>/g, '[server guide]');
   return text;
 }
 

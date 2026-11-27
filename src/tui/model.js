@@ -14,9 +14,13 @@ import {
 export { isTextChannel, mentionsUser };
 
 const USER_MESSAGE_TYPES = new Set([0, 19, 20, 23]);
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 const GROUP_WINDOW = 5 * 60 * 1000;
 
-export function displayName(user, fallback = '알 수 없음') {
+export function displayName(user, fallback = 'unknown') {
   if (!user) return fallback;
   return user.global_name || user.display_name || user.nick || user.username || fallback;
 }
@@ -24,7 +28,7 @@ export function displayName(user, fallback = '알 수 없음') {
 export function normalizeGuild(guild) {
   return {
     id: String(guild.id),
-    name: guild.name || '이름 없는 서버',
+    name: guild.name || 'unnamed guild',
     initials: guildInitial(guild.name || '?'),
     icon: guild.icon || null,
     raw: guild,
@@ -50,11 +54,11 @@ export function channelName(channel, users = null, myId = '') {
     const names = ids.map((id) =>
       displayName(users?.get?.(id) || objects.get(id), `user ${id.slice(-4)}`),
     );
-    if (!names.length) return '다이렉트 메시지';
+    if (!names.length) return 'Direct messages';
     if (names.length <= 3) return names.join(', ');
-    return `${names.slice(0, 3).join(', ')} 외 ${names.length - 3}`;
+    return `${names.slice(0, 3).join(', ')} +${names.length - 3}`;
   }
-  return `채널 ${String(channel.id).slice(-4)}`;
+  return `channel ${String(channel.id).slice(-4)}`;
 }
 
 export function channelTopic(channel) {
@@ -133,15 +137,15 @@ export function dayLabel(date) {
   const now = new Date();
   const today = dayKey(now);
   const key = dayKey(value);
-  if (key === today) return '오늘';
+  if (key === today) return 'Today';
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  if (key === dayKey(yesterday)) return '어제';
-  const weekday = ['일', '월', '화', '수', '목', '금', '토'][value.getDay()];
+  if (key === dayKey(yesterday)) return 'Yesterday';
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][value.getDay()];
   const sameYear = value.getFullYear() === now.getFullYear();
   const ymd = sameYear
-    ? `${value.getMonth() + 1}월 ${value.getDate()}일`
-    : `${value.getFullYear()}년 ${value.getMonth() + 1}월 ${value.getDate()}일`;
-  return `${ymd} ${weekday}요일`;
+    ? `${MONTHS[value.getMonth()]} ${value.getDate()}`
+    : `${MONTHS[value.getMonth()]} ${value.getDate()}, ${value.getFullYear()}`;
+  return `${ymd} (${weekday})`;
 }
 
 export function hhmm(date) {
@@ -161,39 +165,39 @@ export function systemText(message, users = null) {
   const author = messageAuthorName(message, users);
   switch (Number(message?.type)) {
     case 1:
-      return `${author}님이 대화에 참여했습니다.`;
+      return `${author} joined the conversation.`;
     case 2:
-      return `${author}님이 대화에서 나갔습니다.`;
+      return `${author} left the conversation.`;
     case 3:
-      return `${author}님이 통화를 시작했습니다.`;
+      return `${author} started a call.`;
     case 4:
-      return `${author}님이 채널 이름을 변경했습니다.`;
+      return `${author} changed the channel name.`;
     case 5:
-      return `${author}님이 채널 아이콘을 변경했습니다.`;
+      return `${author} changed the channel icon.`;
     case 6:
-      return `${author}님이 메시지를 고정했습니다.`;
+      return `${author} pinned a message.`;
     case 7:
-      return `${author}님이 서버에 참여했습니다.`;
+      return `${author} joined the server.`;
     case 8:
     case 9:
     case 10:
     case 11:
-      return `${author}님이 서버를 부스트했습니다.`;
+      return `${author} boosted the server.`;
     case 12:
-      return `${author}님이 채널을 팔로우했습니다.`;
+      return `${author} followed the channel.`;
     case 18:
     case 21:
-      return `${author}님이 스레드를 만들었습니다.`;
+      return `${author} created a thread.`;
     case 22:
-      return `${author}님이 초대 링크를 공유했습니다.`;
+      return `${author} shared an invite link.`;
     case 24:
-      return `${author}님의 메시지가 자동 검열로 삭제되었습니다.`;
+      return `${author}'s message was removed by auto-moderation.`;
     case 27:
-      return `${author}님이 스테이지를 시작했습니다.`;
+      return `${author} started a stage.`;
     case 28:
-      return `${author}님이 스테이지를 종료했습니다.`;
+      return `${author} ended a stage.`;
     default:
-      return `${author}님의 시스템 메시지 (${message?.type})`;
+      return `${author}'s system message (${message?.type})`;
   }
 }
 
@@ -203,7 +207,7 @@ export function replySummary(message, users = null) {
   const author = messageAuthorName(ref, users);
   const text = messageText(ref, { users });
   const flat = text.replace(/\s+/g, ' ').trim();
-  return `${author}: ${flat || '(내용 없음)'}`;
+  return `${author}: ${flat || '(no content)'}`;
 }
 
 export function attachmentLabel(attachment, suffix = '') {

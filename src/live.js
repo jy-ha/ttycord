@@ -316,7 +316,7 @@ export class LiveSession extends EventEmitter {
     const userId = String(data.user_id);
     const user = data.member?.user || this.client.user(userId);
     const name =
-      user?.global_name || user?.username || data.member?.nick || `사용자 ${userId.slice(-4)}`;
+      user?.global_name || user?.username || data.member?.nick || `user ${userId.slice(-4)}`;
 
     let channel = this.typers.get(channelId);
     if (!channel) {

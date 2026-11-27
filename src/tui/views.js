@@ -267,7 +267,7 @@ export function sidebarItems(app) {
       items.push({
         kind: 'category',
         channel: group.category,
-        label: String(group.category.name || '카테고리').toUpperCase(),
+        label: String(group.category.name || 'category').toUpperCase(),
         collapsed,
       });
       if (collapsed) continue;

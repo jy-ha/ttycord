@@ -307,7 +307,7 @@ export function buildMessageRows(app, cache, width) {
           for (let index = start; index < rows.length; index += 1) linkRows.set(index, link);
         }
       } else {
-        const suffix = !thumb ? '' : thumb.status === 'error' ? '  (미리보기 실패)' : '  ...';
+        const suffix = !thumb ? '' : thumb.status === 'error' ? '  (preview failed)' : '  ...';
         const start = rows.length;
         rows.push(...extraRows(width, [attachmentLabel(attachment, suffix)], background, mention));
         if (link) {
@@ -320,7 +320,7 @@ export function buildMessageRows(app, cache, width) {
     if (extras.length) rows.push(...extraRows(width, extras, background, mention));
     const reactions = reactionItems(message);
     if (reactions.length) rows.push(reactionRow(width, reactions));
-    if (message.__failed) rows.push(...extraRows(width, ['⚠ 전송 실패'], background, mention));
+    if (message.__failed) rows.push(...extraRows(width, ['⚠ send failed'], background, mention));
 
     // A mention gets a marker in the left gutter. The cursor overwrites the
     // same cell while it sits on this message, which is fine: both mean

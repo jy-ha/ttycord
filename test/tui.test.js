@@ -229,7 +229,7 @@ function makeApp({
 test('dumpRender includes the main regions', () => {
   const text = dumpRender({ width: 100, height: 30 });
   assert.match(text, /ttycord/);
-  assert.match(text, /Rust Korea/);
+  assert.match(text, /Demo Guild/);
   assert.match(text, /general/);
   assert.match(text, /NEW/);
 });
@@ -975,7 +975,7 @@ test('a multiline paste that mentions a path is still text', async (t) => {
   app.handlePaste(trace);
   assert.equal(app.chat('101').attachments.length, 0);
   assert.equal(app.chat('101').draft, trace);
-  assert.ok(!app.toasts.some((toast) => /찾을 수 없습니다/.test(toast.text)));
+  assert.ok(!app.toasts.some((toast) => /not found/.test(toast.text)));
 
   // Plain paths with no prose are still a drop.
   app.handlePaste(`${text}\n${join(root, 'shot.png')}`);
@@ -1019,11 +1019,11 @@ test('oversized and missing files are rejected with a toast', async (t) => {
     ],
   });
   assert.equal(app.chat('101').attachments.length, 0);
-  assert.ok(app.toasts.some((toast) => /너무 큽니다/.test(toast.text)));
+  assert.ok(app.toasts.some((toast) => /too large/.test(toast.text)));
 
   app.handlePaste('/tmp/ttycord-missing-file.png');
   assert.equal(app.chat('101').attachments.length, 0);
-  assert.ok(app.toasts.some((toast) => /찾을 수 없습니다/.test(toast.text)));
+  assert.ok(app.toasts.some((toast) => /not found/.test(toast.text)));
 });
 
 test('sending staged files uploads them and clears the composer', async (t) => {
@@ -1078,7 +1078,7 @@ test('a failed upload restores the staged files', async (t) => {
     app.chat('101').attachments.map((file) => file.name),
     ['note.txt'],
   );
-  assert.ok(app.toasts.some((toast) => /전송 실패/.test(toast.text)));
+  assert.ok(app.toasts.some((toast) => /send failed/.test(toast.text)));
 });
 
 test('a path left in the draft by a raw-character drop is uploaded on send', async (t) => {
@@ -1146,7 +1146,7 @@ test('a typed slash command is not mistaken for a raw drop', async (t) => {
   for (const ch of gone) app.handleText(ch);
   app.flushRawDrop();
   assert.equal(app.chat('101').draft, '/help');
-  assert.ok(app.toasts.some((toast) => /찾을 수 없습니다/.test(toast.text)));
+  assert.ok(app.toasts.some((toast) => /not found/.test(toast.text)));
 
   // Short slash-heavy text typed quickly stays text.
   app.chat('101').draft = '';
@@ -1237,7 +1237,7 @@ test('ctrl+v reports an empty clipboard instead of silently doing nothing', asyn
   await new Promise((resolve) => setImmediate(resolve));
 
   assert.equal(app.chat('101').attachments.length, 0);
-  assert.ok(app.toasts.some((toast) => /이미지나 파일이 없습니다/.test(toast.text)));
+  assert.ok(app.toasts.some((toast) => /no image or file/.test(toast.text)));
 });
 
 test('ctrl+v closes the help overlay instead of reading the clipboard', async () => {
@@ -2196,7 +2196,7 @@ test('editing someone else\'s message is refused', () => {
   app.handleMessageText('e');
 
   assert.equal(app.chat('101').editingId, null);
-  assert.ok(app.toasts.some((toast) => /내 메시지만/.test(toast.text)));
+  assert.ok(app.toasts.some((toast) => /only edit your own/.test(toast.text)));
 });
 
 test('deleting needs two presses and removes the message', async () => {
@@ -2613,9 +2613,9 @@ test('clicking a message opens a clickable action menu', () => {
     ['react', 'reply', 'copy'],
     'edit/delete are only offered for our own messages',
   );
-  assert.match(screen.renderToString(), /반응/);
-  assert.match(screen.renderToString(), /답장/);
-  assert.match(screen.renderToString(), /링크 복사/);
+  assert.match(screen.renderToString(), /react/);
+  assert.match(screen.renderToString(), /reply/);
+  assert.match(screen.renderToString(), /copy link/);
 });
 
 test('our own message menu includes edit and delete', () => {

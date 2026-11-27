@@ -67,10 +67,10 @@ test('shouldGroup breaks on replies', () => {
 });
 
 test('dayLabel uses today/yesterday', () => {
-  assert.equal(dayLabel(new Date()), '오늘');
+  assert.equal(dayLabel(new Date()), 'Today');
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  assert.equal(dayLabel(yesterday), '어제');
+  assert.equal(dayLabel(yesterday), 'Yesterday');
 });
 
 test('unreadLabel caps at 99+', () => {
@@ -92,8 +92,8 @@ test('channelName resolves DM recipients', () => {
 });
 
 test('systemText labels common message types', () => {
-  assert.match(systemText({ type: 7, author: authorA }), /참여/);
-  assert.match(systemText({ type: 4, author: authorA }), /채널 이름/);
+  assert.match(systemText({ type: 7, author: authorA }), /joined the server/);
+  assert.match(systemText({ type: 4, author: authorA }), /channel name/);
 });
 
 test('inlineSegments marks bold, code and spoilers', () => {
