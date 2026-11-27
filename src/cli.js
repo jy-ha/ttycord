@@ -31,42 +31,42 @@ import {
 const require = createRequire(import.meta.url);
 const VERSION = require('../package.json').version;
 
-const USAGE = `ttycord ${VERSION} — 비공식 디스코드 터미널 클라이언트
+const USAGE = `ttycord ${VERSION} — unofficial Discord terminal client
 
-사용법:
-  ttycord                     실시간 TUI 실행
-  ttycord tui                 실시간 TUI 실행
-  ttycord login [--token T]   토큰 저장 (기본: 로컬 디스코드에서 찾기)
-  ttycord logout              저장된 토큰 삭제
-  ttycord token               토큰 출처와 사용자 확인 (토큰은 가림)
-  ttycord me                  내 계정 정보
-  ttycord guilds              서버 목록
-  ttycord channels <서버ID>    서버 채널 목록
-  ttycord dms                 다이렉트 메시지 목록
-  ttycord messages <채널ID>   최근 메시지 (--limit 20, --before ID)
-  ttycord send <채널ID> <내용> 메시지 전송
-  ttycord ack <채널ID> [메시지ID] 읽음 처리
-  ttycord watch <채널ID>      실시간 메시지 출력 (--all: 모든 채널)
-  ttycord doctor              토큰·REST·게이트웨이 점검
+Usage:
+  ttycord                          run the live TUI
+  ttycord tui                      run the live TUI
+  ttycord login [--token T]        save a token (default: find it locally)
+  ttycord logout                   remove the saved token
+  ttycord token                    show token source and account (masked)
+  ttycord me                       show your account
+  ttycord guilds                   list guilds
+  ttycord channels <guild-id>      list a guild's channels
+  ttycord dms                      list direct messages
+  ttycord messages <channel-id>    recent messages (--limit 20, --before ID)
+  ttycord send <channel-id> <text> send a message
+  ttycord ack <channel-id> [id]    mark a channel read
+  ttycord watch <channel-id>       stream messages (--all: every channel)
+  ttycord doctor                   check token, REST and gateway
 
-공통 옵션:
-  --token <토큰>      토큰 직접 지정 (DISCORD_TOKEN 환경 변수도 사용)
-  --no-validate      토큰 유효성 검사를 건너뜀
-  --json             JSON으로 출력
-  --no-spoof         Chrome TLS 지문 프록시를 명시적으로 끔 (직접 연결)
-  --spoof            지문 프록시 사용 (기본값, 생략 가능)
-  --no-typing        타이핑 표시를 보내지 않음 (tui)
-  --no-images        이미지 미리보기(하프블록)를 끔 (tui)
-  --debug            디버그 로그 (~/tmp/ttycord-debug.log)
-  --dump             TUI 화면을 텍스트로 출력 (tui)
-  -h, --help         도움말
-  -v, --version      버전
+Common options:
+  --token <token>   supply a token (DISCORD_TOKEN is also read)
+  --no-validate     skip token validation
+  --json            print JSON
+  --no-spoof        explicitly disable the Chrome TLS fingerprint proxy
+  --spoof           use the fingerprint proxy (default)
+  --no-typing       do not send typing indicators (tui)
+  --no-images       disable inline images (tui)
+  --debug           write debug logs to the temp dir (ttycord-debug.log)
+  --dump            print the TUI as text (tui)
+  -h, --help        show help
+  -v, --version     show version
 
-토큰은 기본적으로 로컬 디스코드 데스크톱 클라이언트의 Local Storage에서
-읽기 전용으로 찾습니다. 토큰을 화면에 전체 출력하지 않습니다.
+The token is normally found read-only in the local Discord desktop client's
+Local Storage. Tokens are never printed in full.
 
-주의: 사용자 토큰을 사용하는 클라이언트는 디스코드 이용약관에 위배될 수 있으며
-계정 제재 위험은 사용자에게 있습니다.`;
+Warning: a client that uses a user token may violate Discord's Terms of Service.
+Account action is possible, and you take that risk yourself.`;
 
 const OPTIONS = {
   token: { type: 'string' },
@@ -89,7 +89,7 @@ const OPTIONS = {
 };
 
 function fail(message, code = 1) {
-  console.error(`오류: ${message}`);
+  console.error(`error: ${message}`);
   process.exitCode = code;
 }
 
@@ -120,9 +120,9 @@ async function ensureSpoof(debug) {
     });
   } catch (error) {
     throw new Error(
-      `TLS 지문 프록시를 시작하지 못했습니다: ${error.message}\n` +
-        'Chrome 지문 없이 연결하지 않습니다. 프록시를 빌드하거나 ' +
-        '--no-spoof / TTYCORD_SPOOF=0으로 명시적으로 끄세요.',
+      `could not start the TLS fingerprint proxy: ${error.message}\n` +
+        'Refusing to connect without the Chrome fingerprint. Build the proxy, ' +
+        'or disable it explicitly with --no-spoof / TTYCORD_SPOOF=0.',
     );
   }
   debug?.(
@@ -156,7 +156,7 @@ async function connect(values, debug) {
 }
 
 function printUser(user) {
-  console.log(`사용자: ${displayName(user)} (@${user.username})`);
+  console.log(`User: ${displayName(user)} (@${user.username})`);
   console.log(`ID: ${user.id}`);
 }
 
@@ -189,14 +189,14 @@ async function cmdLogin(values, debug) {
     username: me.username,
     globalName: me.global_name || '',
   });
-  console.log(`토큰을 저장했습니다 (${resolved.source}).`);
+  console.log(`Token saved (${resolved.source}).`);
   printUser(me);
-  console.log(`설정 파일: ${configPath()}`);
+  console.log(`Config file: ${configPath()}`);
 }
 
 function cmdLogout() {
   const removed = clearConfig();
-  console.log(removed ? '저장된 토큰을 삭제했습니다.' : '저장된 토큰이 없습니다.');
+  console.log(removed ? 'Saved token removed.' : 'No saved token.');
 }
 
 async function cmdToken(values, debug) {
@@ -207,16 +207,16 @@ async function cmdToken(values, debug) {
       validate: !values['no-validate'],
       debug,
     });
-    console.log(`출처: ${resolved.source}`);
-    console.log(`토큰: ${redactToken(resolved.token)} (${resolved.token.length}자)`);
+    console.log(`Source: ${resolved.source}`);
+    console.log(`Token: ${redactToken(resolved.token)} (${resolved.token.length} chars)`);
     if (resolved.user) printUser(resolved.user);
     return;
   }
   const config = loadConfig();
   if (config?.token) {
-    console.log(`출처: 저장된 설정 (${configPath()})`);
-    console.log(`토큰: ${redactToken(config.token)} (${config.token.length}자)`);
-    if (config.username) console.log(`사용자: ${config.globalName || config.username} (${config.userId})`);
+    console.log(`Source: saved config (${configPath()})`);
+    console.log(`Token: ${redactToken(config.token)} (${config.token.length} chars)`);
+    if (config.username) console.log(`User: ${config.globalName || config.username} (${config.userId})`);
     return;
   }
   const resolved = await resolveToken({
@@ -225,8 +225,8 @@ async function cmdToken(values, debug) {
     validate: !values['no-validate'],
     debug,
   });
-  console.log(`출처: ${resolved.source}${resolved.dir ? ` (${resolved.dir})` : ''}`);
-  console.log(`토큰: ${redactToken(resolved.token)} (${resolved.token.length}자)`);
+  console.log(`Source: ${resolved.source}${resolved.dir ? ` (${resolved.dir})` : ''}`);
+  console.log(`Token: ${redactToken(resolved.token)} (${resolved.token.length} chars)`);
   if (resolved.user) printUser(resolved.user);
 }
 
@@ -237,7 +237,7 @@ async function cmdMe(values, debug) {
     return;
   }
   printUser(client.me);
-  console.log(`토큰 출처: ${resolved.source}`);
+  console.log(`Token source: ${resolved.source}`);
 }
 
 async function cmdGuilds(values, debug) {
@@ -249,8 +249,8 @@ async function cmdGuilds(values, debug) {
     console.log(JSON.stringify(ordered, null, 2));
     return;
   }
-  const rows = ordered.map((guild) => [guild.id, guild.name, guild.owner ? '소유자' : '']);
-  console.log(table(['ID', '이름', '비고'], rows));
+  const rows = ordered.map((guild) => [guild.id, guild.name, guild.owner ? 'owner' : '']);
+  console.log(table(['ID', 'NAME', 'NOTE'], rows));
 }
 
 async function cmdChannels(values, debug) {
@@ -258,8 +258,8 @@ async function cmdChannels(values, debug) {
   const guildId = values._[0];
   if (!guildId) {
     const guilds = orderGuilds(await client.loadGuilds(), await client.loadGuildOrder());
-    console.log('서버 ID를 지정하세요.\n');
-    console.log(table(['ID', '이름'], guilds.map((guild) => [guild.id, guild.name])));
+    console.log('Pass a guild ID.\n');
+    console.log(table(['ID', 'NAME'], guilds.map((guild) => [guild.id, guild.name])));
     return;
   }
   const list = await client.loadChannels(guildId);
@@ -275,10 +275,10 @@ async function cmdChannels(values, debug) {
     }
   }
   if (!rows.length) {
-    console.log('표시할 텍스트 채널이 없습니다.');
+    console.log('No text channels to show.');
     return;
   }
-  console.log(table(['ID', '채널', '주제'], rows));
+  console.log(table(['ID', 'CHANNEL', 'TOPIC'], rows));
 }
 
 async function cmdDms(values, debug) {
@@ -298,14 +298,14 @@ async function cmdDms(values, debug) {
     channelName(channel, client.users, client.me.id),
     channel.last_message_id ? relativeTime(snowflakeToMs(channel.last_message_id)) : '',
   ]);
-  console.log(table(['ID', '대화', '최근'], rows));
+  console.log(table(['ID', 'DM', 'LAST'], rows));
 }
 
 async function cmdMessages(values, debug) {
   const { client } = await connect(values, debug);
   const channelId = values._[0];
   if (!channelId) {
-    fail('채널 ID가 필요합니다. `ttycord messages <채널ID>`');
+    fail('a channel ID is required: `ttycord messages <channel-id>`');
     return;
   }
   const limit = Math.max(1, Math.min(100, Number(values.limit) || 20));
@@ -319,7 +319,7 @@ async function cmdMessages(values, debug) {
     return;
   }
   const channel = client.channel(channelId) || (await client.fetchChannel(channelId).catch(() => null)) || { id: channelId };
-  console.log(`${channelLabel(client, channel)} · ${list.length}개`);
+  console.log(`${channelLabel(client, channel)} · ${list.length} messages`);
   for (const message of [...list].reverse()) console.log(formatMessage(client, message));
 }
 
@@ -327,13 +327,13 @@ async function cmdSend(values, debug) {
   const { client } = await connect(values, debug);
   const channelId = values._[0];
   if (!channelId) {
-    fail('채널 ID가 필요합니다. `ttycord send <채널ID> <내용>`');
+    fail('a channel ID is required: `ttycord send <channel-id> <text>`');
     return;
   }
   let content = values._.slice(1).join(' ').trim();
   if (!content) content = await readStdin();
   if (!content) {
-    fail('보낼 내용이 없습니다.');
+    fail('nothing to send.');
     return;
   }
   const message = await client.sendMessage(channelId, content);
@@ -341,14 +341,14 @@ async function cmdSend(values, debug) {
     console.log(JSON.stringify(message, null, 2));
     return;
   }
-  console.log(`전송됨: ${message.id} (${hhmm(messageDate(message))})`);
+  console.log(`Sent: ${message.id} (${hhmm(messageDate(message))})`);
 }
 
 async function cmdAck(values, debug) {
   const { client } = await connect(values, debug);
   const channelId = values._[0];
   if (!channelId) {
-    fail('채널 ID가 필요합니다. `ttycord ack <채널ID> [메시지ID]`');
+    fail('a channel ID is required: `ttycord ack <channel-id> [message-id]`');
     return;
   }
   let messageId = values._[1];
@@ -357,31 +357,31 @@ async function cmdAck(values, debug) {
     messageId = list[0]?.id;
   }
   if (!messageId) {
-    fail('읽음 처리할 메시지가 없습니다.');
+    fail('no message to mark read.');
     return;
   }
   await client.ack(channelId, messageId);
-  console.log(`읽음 처리: ${channelId} / ${messageId}`);
+  console.log(`Marked read: ${channelId} / ${messageId}`);
 }
 
 async function cmdWatch(values, debug) {
   const { client } = await connect(values, debug);
   const target = values._[0] ? String(values._[0]) : '';
   if (!target && !values.all) {
-    fail('채널 ID가 필요합니다. 모든 채널을 보려면 --all을 사용하세요.');
+    fail('a channel ID is required, or pass --all for every channel.');
     return;
   }
   const live = new LiveSession(client, { debug });
   live.on('state', (event) => {
-    if (event.state === 'online') console.error('실시간 연결됨');
-    if (event.state === 'retrying') console.error(`재연결 중… (${event.delay || 0}ms)`);
-    if (event.state === 'offline') console.error('연결 끊김');
+    if (event.state === 'online') console.error('live connection established');
+    if (event.state === 'retrying') console.error(`reconnecting… (${event.delay || 0}ms)`);
+    if (event.state === 'offline') console.error('disconnected');
   });
   live.on('ready', (data) => {
-    console.error(`READY: ${data.user?.username || ''} · 서버 ${data.guilds.length} · DM ${data.privateChannels.length}`);
+    console.error(`READY: ${data.user?.username || ''} · guilds ${data.guilds.length} · DMs ${data.privateChannels.length}`);
   });
   live.on('fatal', (error) => {
-    console.error(`치명적 오류: ${error.message}`);
+    console.error(`fatal error: ${error.message}`);
     live.stop();
     process.exit(1);
   });
@@ -404,19 +404,19 @@ async function cmdWatch(values, debug) {
 
 async function cmdDoctor(values, debug) {
   const { client, resolved } = await connect(values, debug);
-  console.log(`토큰: ${redactToken(resolved.token)} (${resolved.source})`);
+  console.log(`Token: ${redactToken(resolved.token)} (${resolved.source})`);
   printUser(client.me);
 
   const guilds = await client.loadGuilds();
   const dms = await client.loadDms();
-  console.log(`서버: ${guilds.length}`);
-  console.log(`다이렉트 메시지: ${dms.length}`);
+  console.log(`Guilds: ${guilds.length}`);
+  console.log(`Direct messages: ${dms.length}`);
 
   const live = new LiveSession(client, { debug });
   const result = await new Promise((resolve) => {
     const timer = setTimeout(() => {
       live.stop();
-      resolve({ ok: false, reason: '게이트웨이 응답 시간 초과 (20초)' });
+      resolve({ ok: false, reason: 'gateway timed out after 20s' });
     }, 20_000);
     live.once('ready', (data) => {
       clearTimeout(timer);
@@ -432,10 +432,10 @@ async function cmdDoctor(values, debug) {
   });
 
   if (result.ok) {
-    console.log(`게이트웨이: 정상 (서버 ${result.data.guilds.length}, DM ${result.data.privateChannels.length})`);
-    console.log('모든 점검을 통과했습니다.');
+    console.log(`Gateway: ok (guilds ${result.data.guilds.length}, DMs ${result.data.privateChannels.length})`);
+    console.log('All checks passed.');
   } else {
-    console.log(`게이트웨이: 실패 — ${result.reason}`);
+    console.log(`Gateway: failed — ${result.reason}`);
     process.exitCode = 1;
   }
 }
@@ -448,7 +448,7 @@ async function cmdTui(values, debug) {
     return;
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    fail('TUI는 TTY에서만 실행됩니다. 화면만 확인하려면 `ttycord tui --dump`를 사용하세요.');
+    fail('the TUI needs a TTY. Use `ttycord tui --dump` for a text preview.');
     return;
   }
   const { client } = await connect(values, debug);
@@ -543,7 +543,7 @@ export async function main(argv = process.argv.slice(2)) {
         console.log(USAGE);
         break;
       default:
-        fail(`알 수 없는 명령: ${command}\n\n${USAGE}`);
+        fail(`unknown command: ${command}\n\n${USAGE}`);
         break;
     }
   } catch (error) {

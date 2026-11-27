@@ -221,7 +221,7 @@ export class RestClient {
             await sleep(400 * 2 ** attempt);
             continue;
           }
-          throw new DiscordError(`네트워크 오류: ${error.message}`, { method, path: cleanPath });
+          throw new DiscordError(`network error: ${error.message}`, { method, path: cleanPath });
         }
 
         this._observe(key, response.headers);
@@ -244,7 +244,7 @@ export class RestClient {
             await sleep(Math.ceil(seconds * 1000) + 75);
             continue;
           }
-          throw new DiscordError(`요청 한도 초과 (${Math.ceil(seconds)}초 후 다시 시도)`, {
+          throw new DiscordError(`rate limited (retry in ${Math.ceil(seconds)}s)`, {
             status: 429,
             code: data?.code || 0,
             body: data,
@@ -265,7 +265,7 @@ export class RestClient {
               ? data.message
               : typeof data === 'string' && data
                 ? data
-                : response.statusText || '요청 실패';
+                : response.statusText || 'request failed';
           throw new DiscordError(`Discord API ${response.status}: ${message}`, {
             status: response.status,
             code: data?.code || 0,
@@ -280,7 +280,7 @@ export class RestClient {
         );
         return data;
       }
-      throw new DiscordError('요청에 실패했습니다', { method, path: cleanPath });
+      throw new DiscordError('request failed', { method, path: cleanPath });
     });
   }
 

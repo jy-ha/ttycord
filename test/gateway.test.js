@@ -7,8 +7,8 @@ test('fatal close codes are classified', () => {
   assert.equal(isFatalCloseCode(4004), true);
   assert.equal(isFatalCloseCode(4014), true);
   assert.equal(isFatalCloseCode(4000), false);
-  assert.match(closeReason(4004), /인증/);
-  assert.match(closeReason(9999), /종료/);
+  assert.match(closeReason(4004), /authentication/);
+  assert.match(closeReason(9999), /closed/);
 });
 
 test('HELLO triggers IDENTIFY', () => {

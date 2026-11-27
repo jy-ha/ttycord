@@ -53,7 +53,7 @@ test('startSpoofProxy reads the ready line and can be closed', async () => {
 test('startSpoofProxy rejects when the helper exits early', async () => {
   const { dir, file } = fixture('process.exit(3);');
   try {
-    await assert.rejects(startSpoofProxy({ binary: file }), /종료되었습니다/);
+    await assert.rejects(startSpoofProxy({ binary: file }), /exited before becoming ready/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -65,7 +65,7 @@ test('startSpoofProxy rejects an unparseable ready line', async () => {
     setInterval(() => {}, 1000);
   `);
   try {
-    await assert.rejects(startSpoofProxy({ binary: file }), /해석할 수 없습니다/);
+    await assert.rejects(startSpoofProxy({ binary: file }), /could not parse/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

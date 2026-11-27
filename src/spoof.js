@@ -59,8 +59,8 @@ export async function startSpoofProxy({
 } = {}) {
   if (!existsSync(binary)) {
     throw new Error(
-      `TLS 스푸핑 프록시를 찾을 수 없습니다: ${binary}\n` +
-        '`npm run build:proxy`로 빌드하거나 TTYCORD_SPOOF_PROXY로 경로를 지정하세요.',
+      `TLS fingerprint proxy not found: ${binary}\n` +
+        'Build it with `npm run build:proxy`, or set TTYCORD_SPOOF_PROXY.',
     );
   }
 
@@ -120,7 +120,7 @@ function readReady(child, { timeout, debug }) {
     };
 
     const timer = setTimeout(() => {
-      finish(new Error(`프록시가 ${Math.round(timeout / 1000)}초 안에 준비되지 않았습니다.`));
+      finish(new Error(`the proxy was not ready within ${Math.round(timeout / 1000)}s.`));
     }, timeout);
 
     child.stdout.setEncoding('utf8');
@@ -134,11 +134,11 @@ function readReady(child, { timeout, debug }) {
       try {
         info = JSON.parse(line);
       } catch {
-        finish(new Error(`프록시 응답을 해석할 수 없습니다: ${line}`));
+        finish(new Error(`could not parse the proxy response: ${line}`));
         return;
       }
       if (!info?.rest || !info?.gateway) {
-        finish(new Error('프록시가 REST/게이트웨이 주소를 알려주지 않았습니다.'));
+        finish(new Error('the proxy did not report REST/gateway addresses.'));
         return;
       }
       finish(null, info);
@@ -154,7 +154,7 @@ function readReady(child, { timeout, debug }) {
     child.once('exit', (code, signal) => {
       finish(
         new Error(
-          `프록시가 준비되기 전에 종료되었습니다 (code=${code ?? 'null'}, signal=${signal ?? 'null'})`,
+          `the proxy exited before becoming ready (code=${code ?? 'null'}, signal=${signal ?? 'null'})`,
         ),
       );
     });

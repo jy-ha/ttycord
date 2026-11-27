@@ -180,7 +180,7 @@ export async function resolveToken({
   const explicit = String(token || '').trim() || String(process.env.DISCORD_TOKEN || '').trim();
   if (explicit) {
     const user = validate ? await validateToken(explicit, { fetchImpl, baseUrl }) : null;
-    if (validate && !user) throw new Error('주어진 토큰이 유효하지 않습니다.');
+    if (validate && !user) throw new Error('the provided token is not valid.');
     return {
       token: explicit,
       source: token ? 'cli' : 'env',
@@ -202,7 +202,7 @@ export async function resolveToken({
 
   if (!fromLocal) {
     throw new Error(
-      '토큰이 없습니다. `ttycord login` 또는 `DISCORD_TOKEN` 환경 변수를 사용하세요.',
+      'no token found. Use `ttycord login` or the DISCORD_TOKEN environment variable.',
     );
   }
 
@@ -210,10 +210,10 @@ export async function resolveToken({
   if (!local) {
     throw new Error(
       staleConfig
-        ? '저장된 토큰이 만료되었고 로컬 디스코드 클라이언트에서도 유효한 토큰을 찾지 못했습니다. ' +
-            '`ttycord login --token ...`으로 다시 저장하세요.'
-        : '로컬 디스코드 클라이언트에서 유효한 토큰을 찾지 못했습니다. ' +
-            '디스코드에 로그인한 뒤 다시 시도하거나 `--token`을 지정하세요.',
+        ? 'the saved token expired and no valid token was found in the local ' +
+            'Discord client. Save one again with `ttycord login --token ...`.'
+        : 'no valid token was found in the local Discord client. Log in to ' +
+            'Discord, or pass `--token`.',
     );
   }
   if (persistLocal && local.user) {

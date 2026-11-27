@@ -38,21 +38,21 @@ export function isFatalCloseCode(code) {
 export function closeReason(code) {
   switch (Number(code)) {
     case 4004:
-      return '인증에 실패했습니다. 토큰을 확인하세요.';
+      return 'authentication failed. Check the token.';
     case 4010:
-      return '잘못된 shard 설정입니다.';
+      return 'invalid shard configuration.';
     case 4011:
-      return '샤딩이 필요합니다.';
+      return 'sharding is required.';
     case 4012:
-      return '지원하지 않는 게이트웨이 버전입니다.';
+      return 'unsupported gateway version.';
     case 4013:
-      return '잘못된 intents 값입니다.';
+      return 'invalid intents value.';
     case 4014:
-      return '허용되지 않은 intents 값입니다.';
+      return 'disallowed intents value.';
     case 4008:
-      return '요청이 너무 많습니다. 잠시 후 다시 시도하세요.';
+      return 'rate limited. Try again shortly.';
     default:
-      return `게이트웨이 연결이 종료되었습니다 (${code})`;
+      return `gateway connection closed (${code})`;
   }
 }
 

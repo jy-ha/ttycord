@@ -46,8 +46,8 @@ const result = spawnSync(
 
 if (result.error) {
   console.error(
-    `Go 툴체인을 실행할 수 없습니다 (${go}): ${result.error.message}\n` +
-      'https://go.dev/dl/ 에서 설치하거나 TTYCORD_GO로 go 실행 파일 경로를 지정하세요.',
+    `could not run the Go toolchain (${go}): ${result.error.message}\n` +
+      'Install it from https://go.dev/dl/ or set TTYCORD_GO to the go binary.',
   );
   process.exit(1);
 }
